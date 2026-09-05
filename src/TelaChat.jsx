@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// ─────────────────────────────────────────────────────────────
-// TELA DE CHAT INTERATIVO — MVP DO IDOSO (VERSÃO FINAL UNIFICADA)
-// ─────────────────────────────────────────────────────────────
 export default function TelaChat({ onFinalizar }) {
   const [mensagens, setMensagens] = useState([]);
   const [opcoesAtuais, setOpcoesAtuais] = useState([]);
@@ -11,49 +8,51 @@ export default function TelaChat({ onFinalizar }) {
   
   const mensagensFimRef = useRef(null);
 
-  // Rolagem automática da tela para acompanhar o diálogo
   useEffect(() => {
     mensagensFimRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensagens, opcoesAtuais, digitando]);
 
-  // ⚡ MENSAGEM INICIAL DE ACORDAMENTO DO BOT
+  // MENSAGEM INICIAL DO CHAT (MICRO-TCLE)
   useEffect(() => {
     setDigitando(true);
     const timer = setTimeout(() => {
       setDigitando(false);
-      setMensagens([{ remetente: 'bot', texto: 'Olá! Sou o Assistente de Saúde Municipal de Franca. Como posso ajudar o senhor(a) hoje?' }]);
+      setMensagens([{ 
+        remetente: 'bot', 
+        texto: 'Olá! 🤖 Eu sou um assistente virtual em fase de testes para uma pesquisa universitária (TCC).\n\nPara avaliar se sou fácil de usar, eu registro anonimamente quanto tempo as pessoas levam para conversar comigo e quais botões clicam. Não guardo nenhum nome ou dado pessoal.\n\nVocê topa me ajudar testando um agendamento rápido?' 
+      }]);
       setOpcoesAtuais([
-        { id: 'btn_agendar', label: 'Agendar Consulta (Postinho)', disponivel: true },
-        { id: 'btn_urgencia', label: 'Informações de Urgência (PS)', disponivel: true }
+        { id: 'tcle_sim', label: 'Sim, vamos testar!', disponivel: true },
+        { id: 'tcle_nao', label: 'Não quero participar', disponivel: true }
       ]);
     }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // 📅 MOTOR DE GERAÇÃO DO CALENDÁRIO DINÂMICO REALÍSTICO
+  // FUNÇÃO QUE GERA AS DATAS REAIS E SIMULA LOTAÇÃO
   const gerarCalendarioDinamico = () => {
     const dias = [];
-    const dataAtual = new Date(); // Captura a data real do sistema
+    const dataAtual = new Date(); // Pega o dia exato de hoje no celular
     let diasAdicionados = 0;
 
-    // Varre os próximos dias buscando os 4 primeiros dias úteis válidos
+    // Gera os próximos 4 dias úteis
     while (diasAdicionados < 4) {
       dataAtual.setDate(dataAtual.getDate() + 1);
       
-      // Filtra finais de semana (0 = Domingo, 6 = Sábado)
+      // Se não for Sábado (6) nem Domingo (0), adiciona à lista
       if (dataAtual.getDay() !== 0 && dataAtual.getDay() !== 6) {
         
-        // Simulação Estatística: 60% de chance de vaga livre, 40% de lotação na UBS
+        // Sorteio: 60% de chance de ter vaga (true), 40% de estar esgotado (false)
         const temVaga = Math.random() > 0.4; 
         
-        // Formata o texto amigável (Ex: "ter., 16/06")
+        // Formata a data (Ex: "seg., 15/05")
         const diaFormatado = dataAtual.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
         
         dias.push({
           id: `data_${diasAdicionados}`,
           label: temVaga ? `🗓️ ${diaFormatado}` : `🚫 ${diaFormatado} (Esgotado)`,
           disponivel: temVaga,
-          dataLimpa: diaFormatado // Texto puro para impressão no balão do usuário
+          dataLimpa: diaFormatado // Guarda a data limpa para mostrar no chat
         });
         diasAdicionados++;
       }
@@ -61,29 +60,44 @@ export default function TelaChat({ onFinalizar }) {
     return dias;
   };
 
-  // 🌲 ÁRVORE DE DECISÃO LOGÍSTICA E RASTREAMENTO DE TELEMETRIA
+  // ÁRVORE DE DECISÃO E TELEMETRIA
   const handleCliqueBotao = (botao) => {
-    // Cláusula de barreira: impede cliques em botões desabilitados (dias esgotados)
+    // Se o botão não estiver disponível (esgotado), não faz nada.
     if (!botao.disponivel) return;
 
-    // Preserva e atualiza o estado de eventos para a telemetria (evita concorrência assíncrona)
-    const novoEvento = { evento: 'click_botao', nome_botao: botao.label, timestamp: Date.now() };
-    const novosEventos = [...sessionEvents, novoEvento];
+    // Grava telemetria (Se ele clicar numa data, salvamos qual data escolheu)
+    // Atualizado para garantir que o último evento não se perca no escopo do React
+    const novosEventos = [...sessionEvents, { evento: 'click_botao', nome_botao: botao.label, timestamp: Date.now() }];
     setSessionEvents(novosEventos);
     
-    // Formata o texto de exibição no chat
+    // Mostra na tela o texto do botão clicado (limpo)
     const textoMensagem = botao.dataLimpa ? botao.dataLimpa : (botao.label.replace('🗓️ ', ''));
     setMensagens(prev => [...prev, { remetente: 'usuario', texto: textoMensagem }]);
     
     setOpcoesAtuais([]);
     setDigitando(true);
 
-    // Latência intencional para emular o tempo de resposta humana do robô
     setTimeout(() => {
       setDigitando(false);
 
-      // PASSO 1: Seleção de Agendamento Eletivo
-      if (botao.id === 'btn_agendar') {
+      // --- INÍCIO: INTEGRAÇÃO DO MICRO-TCLE ---
+      if (botao.id === 'tcle_sim') {
+        setMensagens(prev => [...prev, { remetente: 'bot', texto: 'Muito obrigado! 🎉\n\nSou o Assistente de Saúde Municipal de Franca. Como posso ajudar o senhor(a) hoje?' }]);
+        setOpcoesAtuais([
+          { id: 'btn_agendar', label: 'Agendar Consulta (Postinho)', disponivel: true },
+          { id: 'btn_urgencia', label: 'Informações de Urgência (PS)', disponivel: true }
+        ]);
+      }
+      else if (botao.id === 'tcle_nao') {
+        setMensagens(prev => [...prev, { remetente: 'bot', texto: 'Tudo bem, eu compreendo! Agradeço muito pela sua atenção. Tenha um ótimo dia! 👋' }]);
+        // Salva a telemetria comprovando que o idoso optou por não participar
+        setTimeout(() => {
+          onFinalizar(novosEventos);
+        }, 3000);
+      }
+      // --- FIM: INTEGRAÇÃO DO MICRO-TCLE ---
+
+      else if (botao.id === 'btn_agendar') {
         setMensagens(prev => [...prev, { remetente: 'bot', texto: 'Qual é o motivo principal da consulta?' }]);
         setOpcoesAtuais([
           { id: 'sint_rotina', label: 'Consulta de Rotina / Receita', disponivel: true },
@@ -91,7 +105,6 @@ export default function TelaChat({ onFinalizar }) {
           { id: 'sint_cronico', label: 'Acompanhamento (Pressão)', disponivel: true }
         ]);
       } 
-      // PASSO 2: Seleção de Sintomas -> Encaminha para UBSs locais
       else if (botao.id.startsWith('sint_')) {
         setMensagens(prev => [...prev, { remetente: 'bot', texto: 'Certo. Para qual Unidade (UBS) mais próxima deseja o agendamento?' }]);
         setOpcoesAtuais([
@@ -100,13 +113,12 @@ export default function TelaChat({ onFinalizar }) {
           { id: 'ubs_estacao', label: 'UBS Estação', disponivel: true }
         ]);
       }
-      // PASSO 3: Seleção da UBS -> Dispara a montagem do calendário dinâmico
       else if (botao.id.startsWith('ubs_')) {
+        // AQUI A MÁGICA DO CALENDÁRIO ACONTECE
         setMensagens(prev => [...prev, { remetente: 'bot', texto: 'Aqui estão os próximos dias úteis. Alguns dias já não têm vagas. Por favor, selecione uma data disponível:' }]);
         const diasCalendario = gerarCalendarioDinamico();
         setOpcoesAtuais(diasCalendario);
       }
-      // PASSO 4: Seleção da Data Válida -> Pergunta o turno
       else if (botao.id.startsWith('data_')) {
         setMensagens(prev => [...prev, { remetente: 'bot', texto: 'Excelente. Qual período do dia é melhor para o senhor(a)?' }]);
         setOpcoesAtuais([
@@ -114,7 +126,6 @@ export default function TelaChat({ onFinalizar }) {
           { id: 'hora_tarde', label: 'Tarde (13:00 às 16:00)', disponivel: true }
         ]);
       }
-      // PASSO INTERMEDIÁRIO DE URGÊNCIA: Lista os Prontos-Socorros
       else if (botao.id === 'btn_urgencia') {
         setMensagens(prev => [...prev, { remetente: 'bot', texto: '⚠️ Atenção: Casos de urgência não são agendados. Escolha a unidade para ver o endereço:' }]);
         setOpcoesAtuais([
@@ -122,35 +133,18 @@ export default function TelaChat({ onFinalizar }) {
           { id: 'ps_infantil', label: 'Pronto Socorro Infantil (PSI)', disponivel: true }
         ]);
       }
-      
-      // 🚨 DESFECHO A: Fluxo de Urgência Adulto (Exibe endereço físico mapeado)
-      else if (botao.id === 'ps_azzuz') {
-        setMensagens(prev => [
-          ...prev, 
-          { remetente: 'bot', texto: `📍 *Pronto Socorro Álvaro Azzuz (Adulto)*\n\nEndereço: Av. Chico Júlio, 5125 - Vila Imperador\nAtendimento: 24 horas.` },
-          { remetente: 'bot', texto: `Dirija-se imediatamente à unidade. O teste terminou. Muito obrigado pela sua ajuda!` }
-        ]);
-        setTimeout(() => { onFinalizar(novosEventos); }, 4000);
-      }
-      // 🚨 DESFECHO B: Fluxo de Urgência Infantil (Exibe endereço físico mapeado)
-      else if (botao.id === 'ps_infantil') {
-        setMensagens(prev => [
-          ...prev, 
-          { remetente: 'bot', texto: `📍 *Pronto Socorro Infantil (PSI)*\n\nEndereço: R. Aluísio Pachêco Ferreira, 4010 - Jardim Maria Gabriela\nAtendimento: 24 horas.` },
-          { remetente: 'bot', texto: `Dirija-se imediatamente à unidade com a criança. O teste terminou. Muito obrigado pela sua ajuda!` }
-        ]);
-        setTimeout(() => { onFinalizar(novosEventos); }, 4000);
-      }
-      
-      // 🏁 DESFECHO C: Fluxo de Agendamento Concluído (Gera Token / Protocolo)
-      else if (botao.id.startsWith('hora_')) {
+      else if (botao.id.startsWith('hora_') || botao.id.startsWith('ps_')) {
         const protocolo = Math.floor(10000000 + Math.random() * 90000000);
+        
         setMensagens(prev => [
           ...prev, 
-          { remetente: 'bot', texto: `Tudo certo! A sua solicitação foi registrada com sucesso no sistema da Prefeitura.` },
+          { remetente: 'bot', texto: `Tudo certo! A sua solicitação foi registada com sucesso no sistema da Prefeitura.` },
           { remetente: 'bot', texto: `📌 O seu número de protocolo é: *${protocolo}*.\n\nO teste terminou. Muito obrigado pela sua ajuda!` }
         ]);
-        setTimeout(() => { onFinalizar(novosEventos); }, 4000);
+        
+        setTimeout(() => {
+          onFinalizar(novosEventos);
+        }, 4000);
       }
     }, 1500);
   };
@@ -158,7 +152,7 @@ export default function TelaChat({ onFinalizar }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#E5DDD5', fontFamily: "'Segoe UI', Helvetica, sans-serif" }}>
       
-      {/* ── HEADER IDENTITÁRIO (WHATSAPP BUSINESS MOCKUP) ── */}
+      {/* HEADER TIPO WHATSAPP */}
       <div style={{ backgroundColor: '#075E54', padding: '10px 15px', display: 'flex', alignItems: 'center', color: 'white', zIndex: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
           <div style={{ width: 40, height: 40, backgroundColor: '#fff', borderRadius: '50%', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -174,7 +168,7 @@ export default function TelaChat({ onFinalizar }) {
         </div>
       </div>
 
-      {/* ── ESTILIZAÇÃO DO CONTEXTO DE CONVERSA ── */}
+      {/* ÁREA DE MENSAGENS */}
       <div style={{ flex: 1, padding: '20px 15px', overflowY: 'auto', backgroundImage: 'url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png")', backgroundRepeat: 'repeat', backgroundSize: '400px' }}>
         
         {mensagens.map((msg, idx) => (
@@ -204,7 +198,7 @@ export default function TelaChat({ onFinalizar }) {
           </div>
         )}
 
-        {/* ── BOTÕES ACESSÍVEIS (MÓDULO WORKFLOWS COM CONTROLE DE SINALIZAÇÃO) ── */}
+        {/* BOTÕES DINÂMICOS COM ESTADO DE "ESGOTADO" */}
         {!digitando && opcoesAtuais.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 5, maxWidth: '85%' }}>
             {opcoesAtuais.map(opcao => (
@@ -213,6 +207,7 @@ export default function TelaChat({ onFinalizar }) {
                 onClick={() => handleCliqueBotao(opcao)}
                 disabled={!opcao.disponivel}
                 style={{
+                  // SE NÃO ESTIVER DISPONÍVEL, FICA CINZA. SE ESTIVER, FICA VERDE.
                   backgroundColor: opcao.disponivel ? '#00A884' : '#E5E7EB',
                   color: opcao.disponivel ? 'white' : '#6B7280',
                   border: opcao.disponivel ? 'none' : '1px solid #D1D5DB',
@@ -231,7 +226,7 @@ export default function TelaChat({ onFinalizar }) {
         <div ref={mensagensFimRef} />
       </div>
 
-      {/* ── RODAPÉ ESTATÍSTICO DE ANCORAGEM MENTAL ── */}
+      {/* BARRA INFERIOR PADRÃO */}
       <div style={{ backgroundColor: '#F0F0F0', padding: '10px', display: 'flex', gap: 10, alignItems: 'center' }}>
         <div style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 20, padding: '10px 15px', color: '#999', fontSize: 15 }}>
           Selecione uma opção acima...
